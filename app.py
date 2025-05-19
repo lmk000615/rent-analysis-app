@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import numpy_financial as npf
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 import random
 import io
 
@@ -198,8 +199,10 @@ repayment_period = st.sidebar.slider("还款期数", 8, 12, 9, step=1)
 first_payment_terms = st.sidebar.slider("首期支付期数", 0, 4, 2, step=1)
 months = st.sidebar.slider("投资月份数", 6, 24, 12, step=1)
 
-# 设置中文字体（如使用 SimHei）
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans']  # 或 'Microsoft YaHei'
+# 设置中文字体
+font_path = "SourceHanSansCN-Regular.ttf"  # 字体文件路径
+my_font = font_manager.FontProperties(fname=font_path)
+plt.rcParams['font.sans-serif'] = [my_font.get_name()]
 plt.rcParams['axes.unicode_minus'] = False    # 正确显示负号
 
 # 点击按钮运行模拟器
