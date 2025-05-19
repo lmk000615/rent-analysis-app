@@ -1,8 +1,6 @@
-random
 streamlit
 pandas
 matplotlib
 numpy
 numpy-financial
 xlsxwriter
-io
