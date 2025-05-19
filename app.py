@@ -337,14 +337,16 @@ if st.sidebar.button("运行模型"):
     # 生成结果
     df_sens = run_bad_debt_sensitivity(bad_debt_range, fixed_params)
 
-    # 绘图
+    # 绘图：坏账率对回款金额的敏感性分析
     fig, ax = plt.subplots()
     ax.plot(df_sens["坏账率"], df_sens["回款总额（万元）"], marker='o')
-    ax.set_xlabel("坏账率")
-    ax.set_ylabel("回款总额（万元）")
-    ax.set_title("坏账率对回款金额的敏感性分析")
+    
+    # 设置中文标签字体
+    ax.set_xlabel("坏账率", fontproperties=my_font)
+    ax.set_ylabel("回款总额（万元）", fontproperties=my_font)
+    ax.set_title("坏账率对回款金额的敏感性分析", fontproperties=my_font)
+    
     ax.grid(True)
-
     st.pyplot(fig)
 
 else:
