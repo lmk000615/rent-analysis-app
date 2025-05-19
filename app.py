@@ -199,7 +199,7 @@ first_payment_terms = st.sidebar.slider("首期支付期数", 0, 4, 2, step=1)
 months = st.sidebar.slider("投资月份数", 6, 24, 12, step=1)
 
 # 设置中文字体（如使用 SimHei）
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 或 'Microsoft YaHei'
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']  # 或 'Microsoft YaHei'
 plt.rcParams['axes.unicode_minus'] = False    # 正确显示负号
 
 # 点击按钮运行模拟器
