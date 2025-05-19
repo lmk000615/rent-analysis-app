@@ -270,7 +270,7 @@ if st.sidebar.button("运行模型"):
     st.subheader("📈 累计净现金流曲线")
     fig, ax = plt.subplots()
     months_list = list(range(1, len(cashflow)+1))
-    ax.plot(months_list, [x / 10000 for x in cashflow], label="累计净现金流（万元）", linewidth=2, fontproperties=my_font)
+    ax.plot(months_list, [x / 10000 for x in cashflow], label="累计净现金流（万元）", linewidth=2)
     # 横坐标设置为整数月份
     ax.set_xticks(months_list)
     ax.axhline(0, linestyle='--', color='gray')
@@ -279,8 +279,9 @@ if st.sidebar.button("运行模型"):
         ax.scatter(breakeven, cashflow[breakeven-1]/10000, color='red')
     ax.set_xlabel("月份", fontproperties=my_font)
     ax.set_ylabel("现金流（万元）", fontproperties=my_font)
+    ax.legend(prop=my_font)
     ax.grid(True)
-    ax.legend()
+    
     st.pyplot(fig)
 
     # 💰 显示关键指标
