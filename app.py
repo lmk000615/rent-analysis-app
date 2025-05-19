@@ -202,8 +202,6 @@ months = st.sidebar.slider("投资月份数", 6, 24, 12, step=1)
 # 设置中文字体
 font_path = "SourceHanSansCN-Regular.ttf"  # 字体文件路径
 my_font = font_manager.FontProperties(fname=font_path)
-plt.rcParams['font.sans-serif'] = [my_font.get_name()]
-plt.rcParams['axes.unicode_minus'] = False    # 正确显示负号
 
 # 点击按钮运行模拟器
 if st.sidebar.button("运行模型"):
@@ -272,15 +270,15 @@ if st.sidebar.button("运行模型"):
     st.subheader("📈 累计净现金流曲线")
     fig, ax = plt.subplots()
     months_list = list(range(1, len(cashflow)+1))
-    ax.plot(months_list, [x / 10000 for x in cashflow], label="累计净现金流（万元）", linewidth=2)
+    ax.plot(months_list, [x / 10000 for x in cashflow], label="累计净现金流（万元）", linewidth=2, fontproperties=my_font)
     # 横坐标设置为整数月份
     ax.set_xticks(months_list)
     ax.axhline(0, linestyle='--', color='gray')
     if breakeven:
         ax.axvline(breakeven, linestyle='--', color='red', label=f"回本点：{breakeven}月")
         ax.scatter(breakeven, cashflow[breakeven-1]/10000, color='red')
-    ax.set_xlabel("月份")
-    ax.set_ylabel("现金流（万元）")
+    ax.set_xlabel("月份", fontproperties=my_font)
+    ax.set_ylabel("现金流（万元）", fontproperties=my_font)
     ax.grid(True)
     ax.legend()
     st.pyplot(fig)
