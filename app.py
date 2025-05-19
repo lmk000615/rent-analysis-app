@@ -254,7 +254,6 @@ if st.sidebar.button("运行模型"):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, sheet_name='Sheet1', index=False)
-        writer.save()
         processed_data = output.getvalue()
 
     # 下载按钮
