@@ -44,7 +44,8 @@ class MerchantSimulator:
             first_payment_terms=2,
             service_fee_rate=0,
             bad_debt_rate=0,
-            monthly_order_range=(19, 20)
+            monthly_order_range=(19, 20),
+            investment_ratio=1.0
     ):
         """
         初始化商户模拟器。
@@ -67,6 +68,7 @@ class MerchantSimulator:
         self.service_fee_rate = service_fee_rate
         self.bad_debt_rate = bad_debt_rate
         self.monthly_order_range = monthly_order_range
+        self.investment_ratio = investment_ratio
 
         # 存储每月投资金额和订单对象列表
         self.monthly_investments = []
@@ -92,7 +94,7 @@ class MerchantSimulator:
 
             # 每个订单的投资金额 = 手机成本 + 服务费
             investment_per_order = self.phone_cost + service_fee_per_order
-            investment_this_month = n_orders * investment_per_order
+            investment_this_month = n_orders * investment_per_order * self.investment_ratio
             self.monthly_investments.append(investment_this_month)
 
             for _ in range(n_orders):
@@ -113,7 +115,7 @@ class MerchantSimulator:
                 # print(cashflow)
                 for i in range(len(cashflow)):
                     # if month + i < len(self.total_cashflow):
-                    self.total_cashflow[i] += cashflow[i]
+                    self.total_cashflow[i] += cashflow[i] * self.investment_ratio
                     # print(self.total_cashflow)
 
 
@@ -179,7 +181,7 @@ class MerchantSimulator:
         d = self.bad_debt_rate
         f = self.service_fee_rate
 
-        monthly_net_cashflow = avg_orders * C * ((1 + r) * (1 - d - f) - 1)
+        monthly_net_cashflow = avg_orders * C * ((1 + r) * (1 - d - f) - 1) * self.investment_ratio
         return monthly_net_cashflow
 
 
@@ -190,11 +192,24 @@ st.title("📊 租机项目盈利分析模拟器")
 # 侧边栏输入参数
 st.sidebar.header("📥 参数设置")
 
+investment_ratio = st.sidebar.slider("投资比例", 0.0, 1.0, 1.0, step=0.05)
 phone_cost = st.sidebar.slider("机器成本", 1000, 15000, 5000, step=100)
 order_count = st.sidebar.slider("每月订单量", 10, 1500, 300, step=10)
-lease_rate = st.sidebar.slider("租赁费率", 0.0, 0.6, 0.3, step=0.01)
-bad_debt_rate = st.sidebar.slider("坏账率", 0.0, 0.1, 0.05, step=0.01)
-service_fee_rate = st.sidebar.slider("服务费率", 0.0, 0.1, 0.02, step=0.01)
+lease_rate = st.sidebar.slider(
+    "租赁费率",
+    0.0, 0.6, 0.3, step=0.01,
+    help="租赁费率 = 机器总回款金额 ÷ 机器成本")
+bad_debt_rate = st.sidebar.slider(
+    "坏账率",
+    0.00, 0.10, 0.05, step=0.01,
+    help="坏账率 = 每月逾期账款 ÷ [月订单量 × 机器成本 × (1 + 服务费率)]"
+)
+
+service_fee_rate = st.sidebar.slider(
+    "服务费率",
+    0.00, 0.10, 0.02, step=0.01,
+    help="服务费率 = 机器服务费 ÷ [机器成本 × (1 + 租赁费率)]"
+)
 repayment_period = st.sidebar.slider("还款期数", 8, 12, 9, step=1)
 first_payment_terms = st.sidebar.slider("首期支付期数", 0, 4, 2, step=1)
 months = st.sidebar.slider("投资月份数", 6, 24, 12, step=1)
@@ -215,7 +230,8 @@ if st.sidebar.button("运行模型"):
         first_payment_terms=first_payment_terms,
         service_fee_rate=service_fee_rate,
         bad_debt_rate=bad_debt_rate,
-        monthly_order_range=(order_count, order_count)
+        monthly_order_range=(order_count, order_count),
+        investment_ratio=investment_ratio
     )
     simulator.simulate()
 
