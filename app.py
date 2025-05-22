@@ -200,7 +200,7 @@ product1_ratio = product1_percent / 100
 bad_debt_percent = st.sidebar.slider(
     "坏账率", 0.0, 10.0, 5.0, step=0.5,
     format="%.1f%%",
-    help="坏账率 = 每月逾期账款 ÷ [月订单量 × 机器成本 × (1 + 租赁费率)]"
+    help="坏账率 = 每月逾期账款 ÷ [月订单量 × 机器成本 × (1 + 租赁费率)] = 总逾期账款 ÷ 总租金"
 )
 bad_debt_rate = bad_debt_percent / 100
 
@@ -208,7 +208,7 @@ bad_debt_rate = bad_debt_percent / 100
 service_fee_percent = st.sidebar.slider(
     "服务费率", 0.0, 10.0, 2.0, step=0.1,
     format="%.1f%%",
-    help="服务费率 = 机器服务费 ÷ [机器成本 × (1 + 租赁费率)]"
+    help="服务费率 = 机器服务费 ÷ [机器成本 × (1 + 租赁费率)] = 服务费 ÷ 机器租金"
 )
 service_fee_rate = service_fee_percent / 100
 
@@ -402,18 +402,31 @@ if st.sidebar.button("运行模型"):
     fig, ax = plt.subplots()
     x = df_sens["坏账率"]
     y = df_sens["回款总额（万元）"]
-    ax.plot(x, y, marker='o')
+    ax.plot(x, y, marker='o', label="模拟结果", color='steelblue')
 
     # 添加每个点的数值标签
     for i, txt in enumerate(y):
-        ax.annotate(f"{txt:.1f}", (x[i], y[i]), textcoords="offset points", xytext=(0, 5), ha='center', fontsize=9)
+        ax.annotate(f"{txt:.1f}", (x.iloc[i], y.iloc[i]), textcoords="offset points", xytext=(0, 5), ha='center', fontsize=9)
 
-    # 设置中文标签字体
+    # --- 插值当前坏账率对应的回款金额 ---
+    from numpy import interp
+    current_x = bad_debt_rate
+    current_y = float(interp(current_x, x, y))  # 插值估算
+
+    # 添加红点 + 数值标注
+    ax.scatter(current_x, current_y, color='red', s=80, zorder=5, label="当前模型")  # 红色圆点
+    ax.annotate(f"{current_y:.1f}", (current_x, current_y - 9), ha='center', fontsize=9, color='red')
+
+    # 设置字体和标签
     ax.set_xlabel("坏账率", fontproperties=my_font)
-    ax.set_ylabel("回款总额（万元）", fontproperties=my_font)
+    ax.set_ylabel("净收益（万元）", fontproperties=my_font)
     ax.set_title("坏账率对回款金额的敏感性分析", fontproperties=my_font)
-    
     ax.grid(True)
+
+    # 添加图例
+    ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), prop=my_font)
+
+    # 显示图表
     st.pyplot(fig)
 
 
@@ -476,28 +489,42 @@ if st.sidebar.button("运行模型"):
     # 生成结果
     df_prepay = run_prepayment_sensitivity(prepayment_range, fixed_params_for_prepay)
     df_prepay = df_prepay.sort_values("提前还款率")
+
+    # 计算斜率（每下降1个百分点提升回款金额）
     delta_x2 = df_prepay["提前还款率"].iloc[-1] - df_prepay["提前还款率"].iloc[0]
     delta_y2 = df_prepay["回款总额（万元）"].iloc[0] - df_prepay["回款总额（万元）"].iloc[-1]
-
     slope2 = delta_y2 / (delta_x2 * 100)
 
+    # 绘图
     fig2, ax2 = plt.subplots()
     x2 = df_prepay["提前还款率"]
     y2 = df_prepay["回款总额（万元）"]
-    ax2.plot(x2, y2, marker='o')
+    ax2.plot(x2, y2, marker='o', label="模拟结果", color='steelblue')
 
     # 添加每个点的数值标签
     for i, txt in enumerate(y2):
-        ax2.annotate(f"{txt:.1f}", (x2[i], y2[i]), textcoords="offset points", xytext=(0, 5), ha='center', fontsize=9)
+        ax2.annotate(f"{txt:.1f}", (x2.iloc[i], y2.iloc[i]), textcoords="offset points", xytext=(0, 5), ha='center', fontsize=9)
+
+    # 当前模型红点（插值）
+    from numpy import interp
+    current_x2 = prepayment_rate
+    current_y2 = float(interp(current_x2, x2, y2))
+    ax2.scatter(current_x2, current_y2, color='red', s=80, zorder=5, label="当前模型")
+    ax2.annotate(f"{current_y2:.1f}", (current_x2, current_y2 - 4), ha='center', fontsize=9, color='red')
+
+    # 设置图表元素
     ax2.set_xlabel("提前还款率", fontproperties=my_font)
-    ax2.set_ylabel("回款总额（万元）", fontproperties=my_font)
+    ax2.set_ylabel("净收益（万元）", fontproperties=my_font)
     ax2.set_title("提前还款率对回款金额的敏感性分析", fontproperties=my_font)
     ax2.grid(True)
+    ax2.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), prop=my_font)
 
+    # 显示图表
     st.pyplot(fig2)
 
+    # 文字结论
     st.markdown(
-        f"📌 根据模拟结果，提前还款率每下降 1 个百分点，净收益大约提升 **{slope2:.1f} 万元**。",
+        f"📌 根据当前模拟结果，提前还款率每上升 1 个百分点，净收益约减少 **{slope2:.1f} 万元**。",
         unsafe_allow_html=True
     )
 
@@ -553,32 +580,42 @@ if st.sidebar.button("运行模型"):
     # 生成结果
     df_ratio = run_product1_ratio_sensitivity(product1_ratio_range, fixed_params_for_ratio)
 
-    # 绘图
+    # 绘图：产品1占比对回款金额的敏感性分析
     fig3, ax3 = plt.subplots()
     x3 = df_ratio["产品1占比"]
     y3 = df_ratio["回款总额（万元）"]
-    ax3.plot(x3, y3, marker='o')
 
-    # 添加标签
+    ax3.plot(x3, y3, marker='o', label="模拟结果", color='steelblue')
+
+    # 添加每个点的数值标签
     for i, txt in enumerate(y3):
-        ax3.annotate(f"{txt:.1f}", (x3[i], y3[i]), textcoords="offset points", xytext=(0, 5), ha='center', fontsize=9)
+        ax3.annotate(f"{txt:.1f}", (x3.iloc[i], y3.iloc[i]), textcoords="offset points", xytext=(0, 5), ha='center', fontsize=9)
 
-    # 设置样式
+    # 当前模型红点（插值）
+    from numpy import interp
+    current_x3 = product1_ratio
+    current_y3 = float(interp(current_x3, x3, y3))
+    ax3.scatter(current_x3, current_y3, color='red', s=80, zorder=5, label="当前模型")
+    ax3.annotate(f"{current_y3:.1f}", (current_x3, current_y3 - 7), ha='center', fontsize=9, color='red')
+
+    # 设置中文标签和样式
     ax3.set_xlabel("产品1占比", fontproperties=my_font)
-    ax3.set_ylabel("回款总额（万元）", fontproperties=my_font)
+    ax3.set_ylabel("净收益（万元）", fontproperties=my_font)
     ax3.set_title("产品1占比对回款金额的敏感性分析", fontproperties=my_font)
     ax3.grid(True)
+    ax3.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), prop=my_font)
 
+    # 展示图表
     st.pyplot(fig3)
 
     # 添加文字解释
     df_ratio = df_ratio.sort_values("产品1占比")
     delta_x3 = df_ratio["产品1占比"].iloc[-1] - df_ratio["产品1占比"].iloc[0]
     delta_y3 = df_ratio["回款总额（万元）"].iloc[-1] - df_ratio["回款总额（万元）"].iloc[0]
-    slope3 = delta_y3 / (delta_x3 * 100)  # 每上升 1 个百分点，回款变化
+    slope3 = delta_y3 / (delta_x3 * 100)
 
     st.markdown(
-        f"📌 根据模拟结果，产品1占比每上升 10 个百分点，净收益大约变化 **{10*slope3:.1f} 万元**。",
+        f"📌 根据当前模拟结果，产品1占比每提升 10 个百分点，回款总额大约变动 **{10*slope3:.1f} 万元**。",
         unsafe_allow_html=True
     )
 
