@@ -419,7 +419,7 @@ if st.sidebar.button("运行模型"):
 
 
     st.markdown(
-        f"📌 根据当前模拟结果，坏账率每下降 1 个百分点，回款总额约提升 **{-slope:.1f} 万元**。",
+        f"📌 根据当前模拟结果，坏账率每下降 1 个百分点，净收益约提升 **{-slope:.1f} 万元**。",
         unsafe_allow_html=True
     )
 
@@ -497,9 +497,225 @@ if st.sidebar.button("运行模型"):
     st.pyplot(fig2)
 
     st.markdown(
-        f"📌 根据模拟结果，提前还款率每下降 1 个百分点，回款总额大约提升 **{slope2:.1f} 万元**。",
+        f"📌 根据模拟结果，提前还款率每下降 1 个百分点，净收益大约提升 **{slope2:.1f} 万元**。",
         unsafe_allow_html=True
     )
+
+    # 产品1占比敏感性分析
+    st.markdown("---")
+    st.header("🧮 产品占比敏感性分析")
+
+    # 设置分析参数范围（从 0 到 1，步长 0.1）
+    product1_ratio_range = np.linspace(0.0, 1.0, 11)
+
+    # 固定参数（来自当前页面设置）
+    fixed_params_for_ratio = {
+        "months": months,
+        "phone_cost": phone_cost,
+        "lease_rate1": lease_rate1,
+        "repayment_period1": repayment_period1,
+        "first_payment_terms1": first_payment_terms1,
+        "lease_rate2": lease_rate2,
+        "repayment_period2": repayment_period2,
+        "first_payment_terms2": first_payment_terms2,
+        "service_fee_rate": service_fee_rate,
+        "bad_debt_rate": bad_debt_rate,
+        "monthly_order_range": (order_count, order_count),
+        "investment_ratio": investment_ratio,
+        "prepayment_rate": prepayment_rate
+    }
+
+    # 执行模拟函数
+    def run_product1_ratio_sensitivity(ratio_range, fixed_params):
+        results = []
+        for ratio in ratio_range:
+            sim = MerchantSimulator3(
+                months=fixed_params["months"],
+                phone_cost=fixed_params["phone_cost"],
+                lease_rate1=fixed_params["lease_rate1"],
+                repayment_period1=fixed_params["repayment_period1"],
+                first_payment_terms1=fixed_params["first_payment_terms1"],
+                lease_rate2=fixed_params["lease_rate2"],
+                repayment_period2=fixed_params["repayment_period2"],
+                first_payment_terms2=fixed_params["first_payment_terms2"],
+                service_fee_rate=fixed_params["service_fee_rate"],
+                bad_debt_rate=fixed_params["bad_debt_rate"],
+                monthly_order_range=fixed_params["monthly_order_range"],
+                investment_ratio=fixed_params["investment_ratio"],
+                product1_ratio=ratio,
+                prepayment_rate=fixed_params["prepayment_rate"]
+            )
+            sim.simulate()
+            total_repayment = max(sim.get_cumulative_cashflow()) / 10_000  # 转为万元
+            results.append((ratio, total_repayment))
+        return pd.DataFrame(results, columns=["产品1占比", "回款总额（万元）"])
+
+    # 生成结果
+    df_ratio = run_product1_ratio_sensitivity(product1_ratio_range, fixed_params_for_ratio)
+
+    # 绘图
+    fig3, ax3 = plt.subplots()
+    x3 = df_ratio["产品1占比"]
+    y3 = df_ratio["回款总额（万元）"]
+    ax3.plot(x3, y3, marker='o')
+
+    # 添加标签
+    for i, txt in enumerate(y3):
+        ax3.annotate(f"{txt:.1f}", (x3[i], y3[i]), textcoords="offset points", xytext=(0, 5), ha='center', fontsize=9)
+
+    # 设置样式
+    ax3.set_xlabel("产品1占比", fontproperties=my_font)
+    ax3.set_ylabel("回款总额（万元）", fontproperties=my_font)
+    ax3.set_title("产品1占比对回款金额的敏感性分析", fontproperties=my_font)
+    ax3.grid(True)
+
+    st.pyplot(fig3)
+
+    # 添加文字解释
+    df_ratio = df_ratio.sort_values("产品1占比")
+    delta_x3 = df_ratio["产品1占比"].iloc[-1] - df_ratio["产品1占比"].iloc[0]
+    delta_y3 = df_ratio["回款总额（万元）"].iloc[-1] - df_ratio["回款总额（万元）"].iloc[0]
+    slope3 = delta_y3 / (delta_x3 * 100)  # 每上升 1 个百分点，回款变化
+
+    st.markdown(
+        f"📌 根据模拟结果，产品1占比每上升 10 个百分点，净收益大约变化 **{10*slope3:.1f} 万元**。",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("---")
+    st.header("📈 首付期数提升占比敏感性分析")
+
+    # 设置占比范围（每25%提升一档）
+    increase_ratios = [0.0, 0.25, 0.5, 0.75, 1.0]
+    breakevens, max_debts, profits = [], [], []
+
+    for ratio in increase_ratios:
+        # 分别计算原始订单和提升首付订单的数量
+        base_orders = int(order_count * (1 - ratio))
+        increased_orders = order_count - base_orders  # 保证总订单数一致
+
+        # 🟢 原始首付期数模拟
+        sim_base = MerchantSimulator3(
+            months=months,
+            phone_cost=phone_cost,
+            lease_rate1=lease_rate1,
+            repayment_period1=repayment_period1,
+            first_payment_terms1=first_payment_terms1,
+            lease_rate2=lease_rate2,
+            repayment_period2=repayment_period2,
+            first_payment_terms2=first_payment_terms2,
+            service_fee_rate=service_fee_rate,
+            bad_debt_rate=bad_debt_rate,
+            monthly_order_range=(base_orders, base_orders),
+            investment_ratio=investment_ratio,
+            product1_ratio=product1_ratio,
+            prepayment_rate=prepayment_rate
+        )
+        sim_base.simulate()
+        cf_base = sim_base.get_net_cashflow()
+
+        # 🔵 增加一期首付模拟
+        sim_add = MerchantSimulator3(
+            months=months,
+            phone_cost=phone_cost,
+            lease_rate1=lease_rate1,
+            repayment_period1=repayment_period1,
+            first_payment_terms1=first_payment_terms1 + 1,
+            lease_rate2=lease_rate2,
+            repayment_period2=repayment_period2,
+            first_payment_terms2=first_payment_terms2 + 1,
+            service_fee_rate=service_fee_rate,
+            bad_debt_rate=bad_debt_rate,
+            monthly_order_range=(increased_orders, increased_orders),
+            investment_ratio=investment_ratio,
+            product1_ratio=product1_ratio,
+            prepayment_rate=prepayment_rate
+        )
+        sim_add.simulate()
+        cf_add = sim_add.get_net_cashflow()
+
+        # 📊 合并净现金流（对齐长度）
+        max_len = max(len(cf_base), len(cf_add))
+        total_cf = [
+            (cf_base[i] if i < len(cf_base) else 0) +
+            (cf_add[i] if i < len(cf_add) else 0)
+            for i in range(max_len)
+        ]
+        cum_cf = np.cumsum(total_cf)
+
+        # 提取关键指标
+        breakeven = next((i for i, val in enumerate(cum_cf) if val >= 0), len(cum_cf)) + 1
+        breakevens.append(breakeven)
+        max_debts.append(round(-min(cum_cf) / 10000, 1))  # 万元
+        profits.append(round(cum_cf[-1] / 10000, 1))      # 万元
+
+    # 📊 柱状图展示
+    fig, ax = plt.subplots()
+    x = np.arange(len(increase_ratios))
+    bar_width = 0.25
+
+    # 左侧 Y 轴：金额类指标
+    bar_max_debt = ax.bar(x, max_debts, width=bar_width, label='最大垫资（万元）', color='darkorange')
+    bar_profit = ax.bar(x + bar_width, profits, width=bar_width, label='净收益（万元）', color='seagreen')
+    ax.set_ylabel("金额（万元）", fontproperties=my_font)
+
+    # 右侧 Y 轴：回款周期（月）
+    ax2 = ax.twinx()
+    bar_breakeven = ax2.bar(x - bar_width, breakevens, width=bar_width, label='回款周期（月）', color='steelblue')
+    ax2.set_ylabel("回款周期（月）", fontproperties=my_font)
+    ax2.set_ylim(0, max(breakevens) + 2)
+    ax2.tick_params(axis='y', labelsize=10)
+
+    # X 轴设置
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{int(r * 100)}%" for r in increase_ratios], fontproperties=my_font)
+    ax.set_xlabel("增加1期首付的产品占比", fontproperties=my_font)
+    ax.set_title("首付期数增加占比对回款表现的影响", fontproperties=my_font)
+
+    # 添加图例（合并左右轴图例）
+    bars = [bar_breakeven[0], bar_max_debt[0], bar_profit[0]]
+    labels = ["回款周期（月）", "最大垫资（万元）", "净收益（万元）"]
+    ax.legend(
+        bars, labels,
+        prop=my_font,
+        fontsize=9,
+        loc='center left',
+        bbox_to_anchor=(1.10, 0.5),
+        borderaxespad=0.5,
+        frameon=True
+    )
+
+
+
+# 添加数值标签
+    for i in range(len(x)):
+        ax2.annotate(f"{breakevens[i]}",
+                     (x[i] - bar_width, breakevens[i] + 0.3),
+                     ha='center', fontsize=8)
+        ax.annotate(f"{max_debts[i]:.1f}",
+                    (x[i], max_debts[i] + 0.3),
+                    ha='center', fontsize=8)
+
+        ax.annotate(f"{profits[i]:.1f}",
+                    (x[i] + bar_width, profits[i] + 0.3),
+                    ha='center', fontsize=8)
+
+    st.pyplot(fig)
+
+    # 🔍 结果文字说明
+    delta_breakeven = breakevens[0] - breakevens[-1]
+    delta_debt = max_debts[0] - max_debts[-1]
+
+    st.markdown(
+        f"""
+        📌 将**部分产品首付期数增加1期**的占比从 0% 提升到 100%：
+        
+        - 回款周期提前 **{delta_breakeven} 个月**
+        - 最大垫资金额减少 **{delta_debt:.1f} 万元**
+        """,
+        unsafe_allow_html=True
+    )
+
 
 
 else:
