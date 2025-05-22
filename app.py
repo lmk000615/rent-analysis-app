@@ -342,6 +342,8 @@ if st.sidebar.button("运行模型"):
     - 实际投资收益率：**{cashflow[-1]/max(cumulative_investments):.2%}**（净利润÷累计投资金额）
     - 总收益率：**{cashflow[-1] / max_deficit:.2%}**（净利润÷最大垫资）
     - 回本周期：**{breakeven} 个月**（现金流首次为正所需时间）
+    
+    注：本模型测算结果不包含公司运营成本、人工成本、税费以及资金成本等其他费用，仅供参考。
     """)
 
     def run_bad_debt_sensitivity(bad_debt_rates, fixed_params):
