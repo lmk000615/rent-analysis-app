@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 import random
 import io
+import time
+
 
 class PhoneOrder:
     def __init__(self, start_month, phone_cost, lease_rate, repayment_period, first_payment_terms, default=False):
@@ -149,6 +151,25 @@ class MerchantSimulator3:
             if val >= 0:
                 return i + 1  # 返回第几个月（从1开始计）
         return None
+
+# 设置密码
+CORRECT_PASSWORD = "zhiliaozu16"
+
+# 如果尚未验证通过
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if not st.session_state["authenticated"]:
+    st.header("🔐 访问权限验证")
+    password = st.text_input("请输入访问密码：", type="password")
+    if password == CORRECT_PASSWORD:
+        st.session_state["authenticated"] = True
+        st.success("验证成功！请继续使用模拟器。")
+        time.sleep(1.0)
+        st.rerun()  # ✅ 强制刷新页面，隐藏验证部分
+    elif password != "":
+        st.error("密码错误，请重试。")
+    st.stop()  # ⛔ 阻止加载后续内容
 
 
 st.title("📊 知了租项目盈利分析模拟器")
