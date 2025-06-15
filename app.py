@@ -178,7 +178,7 @@ st.title("📊 知了租项目盈利分析模拟器")
 st.sidebar.header("📥 参数设置")
 
 phone_cost = st.sidebar.slider("机器成本", 1000, 15000, 5000, step=100, format="%d元")
-order_count = st.sidebar.slider("每月订单量", 10, 1500, 300, step=10)
+order_count = st.sidebar.slider("每月订单量", 10, 3000, 300, step=10)
 
 # 🔸 产品1 和 产品2 还款期数
 col3, col4 = st.sidebar.columns(2)
@@ -250,7 +250,7 @@ investment_ratio = investment_percent / 100
 
 # 投资时长
 months = st.sidebar.slider(
-    "投资月份数", 6, 24, 12, step=1,
+    "投资月份数", 6, 36, 12, step=1,
     format="%d月",
     help="固定投资月份数，超过此月份后持续回款，但不再继续投资")
 
