@@ -53,7 +53,8 @@ class MerchantSimulator3:
             bad_debt_rate=0,
             monthly_order_range=(19, 20),
             investment_ratio=1.0,
-            prepayment_rate=0.2
+            prepayment_rate=0.2,
+            company_fee_rate=0.0
     ):
         self.months = months
         self.phone_cost = phone_cost
@@ -69,8 +70,10 @@ class MerchantSimulator3:
         self.monthly_order_range = monthly_order_range
         self.investment_ratio = investment_ratio
         self.prepayment_rate = prepayment_rate
+        self.company_fee_rate = company_fee_rate
 
         self.monthly_investments = []
+        self.monthly_company_fees = []
         self.total_cashflow = []
         self.orders = []
         self.monthly_order_count = []
@@ -84,6 +87,7 @@ class MerchantSimulator3:
             self.monthly_order_count.append(n_orders)
 
             investment_this_month = 0
+            investment_this_month2 = 0
 
             for _ in range(n_orders):
                 is_product1 = random.random() < self.product1_ratio
@@ -101,6 +105,9 @@ class MerchantSimulator3:
                 service_fee = self.phone_cost * (1 + lease_rate) * self.service_fee_rate
                 investment_per_order = (self.phone_cost + service_fee) * self.investment_ratio
                 investment_this_month += investment_per_order
+                #用于计算设备款投资
+                investment_per_order2 = self.phone_cost
+                investment_this_month2 += investment_per_order2
 
                 order = PhoneOrder(
                     start_month=month,
@@ -116,7 +123,11 @@ class MerchantSimulator3:
                 for i in range(len(cashflow)):
                     self.total_cashflow[i] += cashflow[i] * self.investment_ratio
 
+            # 添加公司费用支出（按投资比例算）
             self.monthly_investments.append(investment_this_month)
+            company_fee = investment_this_month2 * self.company_fee_rate
+            self.monthly_company_fees.append(company_fee)
+            self.total_cashflow[month - 1] -= company_fee  # 从现金流中扣除
     def get_net_cashflow(self):
         net_cashflow = []
         for i in range(len(self.total_cashflow)):
@@ -254,6 +265,13 @@ months = st.sidebar.slider(
     format="%d月",
     help="固定投资月份数，超过此月份后持续回款，但不再继续投资")
 
+# 公司费用率
+company_fee_percent = st.sidebar.slider(
+    "公司费用率", 0.0, 10.0, 0.0, step=0.1,
+    format="%.1f%%",
+    help="公司费用率 = 公司运营成本 ÷ 机器成本"
+)
+company_fee_rate = company_fee_percent / 100
 
 
 
@@ -279,7 +297,8 @@ if st.sidebar.button("运行模型"):
         bad_debt_rate=bad_debt_rate,
         monthly_order_range=(order_count, order_count),
         investment_ratio=investment_ratio,
-        prepayment_rate=prepayment_rate
+        prepayment_rate=prepayment_rate,
+        company_fee_rate=company_fee_rate
     )
     simulator.simulate()
 
@@ -297,6 +316,9 @@ if st.sidebar.button("运行模型"):
         simulator.repayment_period1 - simulator.first_payment_terms1,
         simulator.repayment_period2 - simulator.first_payment_terms2)
     cumulative_investments = simulator.get_cumulative_investment()
+    monthly_company_fees = simulator.monthly_company_fees + [0]*max(
+        simulator.repayment_period1 - simulator.first_payment_terms1,
+        simulator.repayment_period2 - simulator.first_payment_terms2)
     net_cashflow = simulator.get_net_cashflow()
     cumulative_cashflow = simulator.get_cumulative_cashflow()   # 累计现金流
     breakeven = simulator.get_breakeven_month()  # 回本月份
@@ -307,6 +329,7 @@ if st.sidebar.button("运行模型"):
         '订单量': orders,
         '投资金额': investments,
         '累计投资金额': cumulative_investments,
+        '公司运行成本': monthly_company_fees,
         '回款金额': repayments,
         '净现金流': net_cashflow,
         '累计净现金流': cumulative_cashflow
