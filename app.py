@@ -164,7 +164,7 @@ class MerchantSimulator3:
         return None
 
 # 设置密码
-CORRECT_PASSWORD = "zhiliaozu16"
+CORRECT_PASSWORD = "zhiliaozu26"
 
 # 如果尚未验证通过
 if "authenticated" not in st.session_state:
