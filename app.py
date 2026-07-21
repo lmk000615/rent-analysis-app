@@ -13,13 +13,13 @@ class PhoneOrder:
     """单台手机的租机订单。
 
     现金流模型（押金首付 + 租金费率模式）：
-        押金首付 deposit      = phone_cost × deposit_rate      （首月一次性收齐）
+        押金首付 deposit      = phone_cost × deposit_rate      （首月一次性收齐，第1月不付月供）
         应收总租金 total      = phone_cost × (1 + lease_rate)
         实收总租金 effective  = total × (1 - prepayment_loss_rate)   （提前还款损失已应用）
-        月供 monthly_payment  = (effective - deposit) / repayment_period
-        第 1 月现金流 = deposit + monthly_payment
+        月供 monthly_payment  = (effective - deposit) / (repayment_period - 1)
+        第 1 月现金流 = deposit             （仅押金首付）
         后续 N-1 月    = monthly_payment
-        N 期总和       = effective   （守恒，可作不变量校验）
+        N 期总和       = effective          （守恒，可作不变量校验）
     """
 
     def __init__(self, start_month, phone_cost, lease_rate, repayment_period,
@@ -35,7 +35,9 @@ class PhoneOrder:
         self.total_repayment = phone_cost * (1 + lease_rate)
         self.effective_total = effective_total if effective_total is not None else self.total_repayment
         # 月供不能为负（极端情况下押金首付已超过实收总租金时兜底）
-        self.monthly_payment = max(0.0, (self.effective_total - self.deposit)) / repayment_period
+        # 第 1 月只付押金不付月供，所以月供按 (repayment_period - 1) 期分摊
+        divisor = repayment_period - 1 if repayment_period > 1 else 1
+        self.monthly_payment = max(0.0, (self.effective_total - self.deposit)) / divisor
 
     def get_monthly_cashflow(self):
         """返回从第 start_month 开始的回款列表（相对于整个项目周期）。"""
@@ -45,7 +47,7 @@ class PhoneOrder:
             cashflows += [0] * self.repayment_period
         else:
             repayments = [0] * self.repayment_period
-            repayments[0] = self.deposit + self.monthly_payment
+            repayments[0] = self.deposit  # 第1月仅收押金首付，不收月供
             for i in range(1, self.repayment_period):
                 repayments[i] = self.monthly_payment
             cashflows += repayments

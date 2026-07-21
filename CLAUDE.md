@@ -18,8 +18,8 @@
 - **公式**：
   - `deposit = phone_cost × deposit_rate`
   - `total_repayment = phone_cost × (1 + lease_rate)`
-  - `monthly_payment = (total_repayment - deposit) / repayment_period`
-  - 第 1 月 = `deposit + monthly_payment`，后续每月 = `monthly_payment`
+  - `monthly_payment = (total_repayment - deposit) / (repayment_period - 1)`
+  - 第 1 月 = `deposit`（仅押金首付，不付月供），后续 N-1 月 = `monthly_payment`
 
 ### `MerchantSimulator3`（模拟器主体）
 
