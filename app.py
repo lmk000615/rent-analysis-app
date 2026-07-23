@@ -381,6 +381,37 @@ if st.sidebar.button("运行模型"):
         '累计净现金流': cumulative_cashflow
     })
 
+    # 📱 单机信息：从单个产品角度看金额数据
+    unit_retail = phone_cost
+    unit_deposit = phone_cost * deposit_rate
+    unit_total_receivable = phone_cost * (1 + avg_lease_rate)
+    unit_effective = unit_total_receivable * (1 - prepayment_loss_rate)
+    unit_net_receivable = unit_effective * (1 - bad_debt_rate)  # 再扣坏账
+    unit_monthly = (unit_effective - unit_deposit) / (repayment_period - 1) if repayment_period > 1 else 0
+    unit_service_fee = unit_total_receivable * service_fee_rate
+    unit_invest_per_order = (phone_cost + unit_service_fee) * investment_ratio
+    unit_gross_profit = unit_net_receivable - unit_invest_per_order  # 扣完所有损失
+
+    st.subheader("📱 单机信息")
+    st.markdown(f"""
+| 项目 | 数值 | 说明 |
+|------|------|------|
+| **机器成本（零售价）** | **{unit_retail:,.0f} 元** | 单台手机采购成本（也是零售价基准） |
+| 押金首付率 | {deposit_rate_percent:.1f}% | 用户可调，零售价的百分比 |
+| **押金首付金额** | **{unit_deposit:,.2f} 元** | 第 1 月一次性收取 |
+| 平均租金费率 | {avg_lease_rate_percent:.1f}% | 零售价加价费率 |
+| **应收总租金** | **{unit_total_receivable:,.2f} 元** | = 零售价 × (1 + 租金费率) |
+| 提前还款损失率 | {prepayment_loss_percent:.1f}% | 总租金损失比例 |
+| **实收总租金** | **{unit_effective:,.2f} 元** | = 应收总租金 × (1 - 提前还款损失率) |
+| 坏账率 | {bad_debt_percent:.1f}% | 总租金损失比例 |
+| **实收净额（扣完所有损失）** | **{unit_net_receivable:,.2f} 元** | = 实收总租金 × (1 - 坏账率) |
+| 还款期数 | {repayment_period} 期 | 含押金首付月 |
+| **月供（第 2~{repayment_period} 月）** | **{unit_monthly:,.2f} 元/月** | = (实收总租金 - 押金) ÷ (期数 - 1) |
+| 服务费 | {unit_service_fee:,.2f} 元 | = 应收总租金 × 服务费率，平台收取 |
+| 商户单机出资 | {unit_invest_per_order:,.2f} 元 | = (机器成本 + 服务费) × 投资比例 |
+| **单机毛利（扣完所有损失）** | **{unit_gross_profit:,.2f} 元** | = 实收净额 - 商户单机出资 |
+""")
+
     st.subheader("📋 每月现金流明细表")
     st.dataframe(df.style.format(precision=1), use_container_width=True, hide_index=True)
 
