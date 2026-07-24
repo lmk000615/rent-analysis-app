@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import numpy_financial as npf
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 from matplotlib import font_manager
 import random
 import io
@@ -249,7 +250,7 @@ st.title("📊 知了租项目盈利分析模拟器")
 st.sidebar.header("📥 参数设置")
 
 phone_cost = st.sidebar.slider("机器成本", 1000, 15000, 5000, step=100, format="%d元")
-order_count = st.sidebar.slider("每月订单量", 10, 5000, 300, step=10)
+order_count = st.sidebar.number_input("每月订单量", min_value=10, max_value=5000, value=300, step=10)
 
 repayment_period = st.sidebar.selectbox(
     "还款期数", options=list(range(6, 16)), index=3,  # 默认 9 期
@@ -339,7 +340,6 @@ if st.sidebar.button("运行模型"):
     cashflow = simulator.get_cumulative_cashflow()
     net_cf = simulator.get_net_cashflow()
     max_deficit = simulator.get_actual_investment()
-    average_investment = simulator.get_average_investment()
     breakeven_bad_debt = simulator.get_breakeven_bad_debt_rate()
 
     repayments = simulator.total_cashflow
@@ -382,6 +382,7 @@ if st.sidebar.button("运行模型"):
     })
 
     # 📱 单机信息：从单个产品角度看金额数据
+    # 单机盈利是机器本身的属性，不受商户投资比例影响（默认 100% 口径）
     unit_retail = phone_cost
     unit_deposit = phone_cost * deposit_rate
     unit_total_receivable = phone_cost * (1 + avg_lease_rate)
@@ -389,7 +390,7 @@ if st.sidebar.button("运行模型"):
     unit_net_receivable = unit_total_receivable * (1 - prepayment_loss_rate - bad_debt_rate)  # 加算扣所有损失
     unit_monthly = (unit_effective - unit_deposit) / (repayment_period - 1) if repayment_period > 1 else 0  # 客户应付口径
     unit_service_fee = unit_total_receivable * service_fee_rate
-    unit_invest_per_order = (phone_cost + unit_service_fee) * investment_ratio
+    unit_invest_per_order = phone_cost + unit_service_fee  # 100% 口径，不乘投资比例
     unit_gross_profit = unit_net_receivable - unit_invest_per_order  # 扣完所有损失
 
     st.subheader("📱 单机信息")
@@ -408,7 +409,7 @@ if st.sidebar.button("运行模型"):
 | 还款期数 | {repayment_period} 期 | 含押金首付月 |
 | **月供（客户应付，第 2~{repayment_period} 月）** | **{unit_monthly:,.2f} 元/月** | = (实收总租金 - 押金) ÷ (期数 - 1) |
 | 服务费 | {unit_service_fee:,.2f} 元 | = 应收总租金 × 服务费率，平台收取 |
-| 商户单机出资 | {unit_invest_per_order:,.2f} 元 | = (机器成本 + 服务费) × 投资比例 |
+| 商户单机出资 | {unit_invest_per_order:,.2f} 元 | = 机器成本 + 服务费（100% 口径，不含投资比例） |
 | **单机毛利（扣完所有损失）** | **{unit_gross_profit:,.2f} 元** | = 实收净额 - 商户单机出资 |
 """)
 
@@ -433,7 +434,8 @@ if st.sidebar.button("运行模型"):
     fig, ax = plt.subplots()
     months_list = list(range(1, len(cashflow) + 1))
     ax.plot(months_list, [x / 10000 for x in cashflow], label="累计净现金流（万元）", linewidth=2)
-    ax.set_xticks(months_list)
+    # 横坐标自动稀疏化：最多显示约 10 个整数月份，避免月份拥挤重叠
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(nbins=10, integer=True))
     ax.axhline(0, linestyle='--', color='gray')
     if breakeven:
         ax.axvline(breakeven, linestyle='--', color='red', label=f"回本点：{breakeven}月")
@@ -455,24 +457,15 @@ if st.sidebar.button("运行模型"):
     else:
         breakeven_bad_debt_str = f"{breakeven_bad_debt * 100:.1f}%"
 
-    # 平均资金投资收益率
-    if average_investment > 0:
-        avg_return_rate = cashflow[-1] / average_investment
-        avg_return_str = f"{avg_return_rate:.2%}"
-    else:
-        avg_return_str = "N/A（无垫资）"
-
     st.markdown(f"""
     - 总投资月份：**{months}**
     - 每月订单量：**{order_count} 单**
     - 总订单量：**{order_count * months} 单**
     - 最大垫资：**{max_deficit / 10000:,.2f} 万元**（滚动投资下累计现金流的最小值）
     - 累计投资金额：**{max(cumulative_investments) / 10000:,.2f} 万元**（累计投资金额为设备款总投入）
-    - 月均垫资：**{average_investment / 10000:,.2f} 万元**（每月 max(0, -累计净现金流) 的算术平均）
     - 净利润：**{cashflow[-1] / 10000:,.2f} 万元**
     - 实际投资收益率：**{cashflow[-1] / max(cumulative_investments):.2%}**（净利润÷累计投资金额）
     - 总收益率：**{cashflow[-1] / max_deficit:.2%}**（净利润÷最大垫资）
-    - **平均资金投资收益率**：**{avg_return_str}**（净利润÷月均垫资）
     - **底线坏账率**：**{breakeven_bad_debt_str}**（其他参数固定时使净利润归零的坏账率）
     - 回本周期：**{breakeven} 个月**（现金流首次为正所需时间）
 
