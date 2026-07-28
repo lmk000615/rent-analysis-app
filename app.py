@@ -414,7 +414,7 @@ if st.sidebar.button("运行模型"):
 """)
 
     st.subheader("📋 每月现金流明细表")
-    st.dataframe(df.style.format(precision=1), use_container_width=True, hide_index=True)
+    st.dataframe(df.style.format("{:,.0f}"), use_container_width=True, hide_index=True)
 
     # 导出为 Excel
     output = io.BytesIO()
